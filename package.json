@@ -1,5 +1,5 @@
 {
-  "name": "npm-release",
+  "name": "@entzik/npm-release",
   "version": "1.0.0",
   "description": "Tiny tool for releasing npm modules.",
   "main": "index.js",
