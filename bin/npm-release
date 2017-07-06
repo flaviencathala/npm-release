@@ -54,6 +54,8 @@ if (!distDir) error('No dist directory supplied.');
 if (!fs.existsSync(distDir) || !fs.lstatSync(distDir).isDirectory())
   error(distDir + ' does not exist or is not a directory.')
 
+msg ('riddle me this, ridlle me that, who\'s afrais of the big bad bat?')
+
 // Run npm verison (tags & commits)
 msg('Updating version...');
 // %s is npm version variable: https://npmjs.org/doc/version.html
