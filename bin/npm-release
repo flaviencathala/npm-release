@@ -59,11 +59,11 @@ msg ('riddle me this, ridlle me that, who\'s afrais of the big bad bat?')
 // Run npm verison (tags & commits)
 msg('Updating version...');
 // %s is npm version variable: https://npmjs.org/doc/version.html
-var npm = spawn('npm', ['version', version, '-m', message || "Release v%s."]);
-npm.stdout.pipe(process.stdout);
-npm.stderr.pipe(process.stderr);
+var sourceCodeVersionBump = spawn('npm', ['version', version, '-m', message || "Release v%s."]);
+sourceCodeVersionBump.stdout.pipe(process.stdout);
+sourceCodeVersionBump.stderr.pipe(process.stderr);
 
-npm.on('close', function (code) {
+sourceCodeVersionBump.on('close', function (code) {
   if (code !== 0) return error('npm version. Exiting.');
 
   success('Version bumped from', oldVersion, 'to', getCurrentVersion());
@@ -85,7 +85,18 @@ npm.on('close', function (code) {
 
     msg('Publishing to npm...');
 
-    // Publish to npm
+    var bumpDist = spawn('npm', ['version', version, '-m', message || "Release v%s."], {cwd:distDir});
+    bumpDist.stdout.pause(process.stdout);
+    bumpDist.on('close', function (code) {
+      if (code !== 0) return error('npm version bump in packaged libary. Exiting.');
+
+      success('bumped version of built package.');
+      done();
+    });
+
+    bumpDist.on('close', function(code) {
+      if (code !== 0) return error('npm version in dist. Exiting.');
+      // Publish to npm
     var publish = spawn('npm', ['publish', distDir]);
     publish.stdout.pipe(process.stdout);
     publish.stderr.pipe(process.stderr);
@@ -96,6 +107,9 @@ npm.on('close', function (code) {
       done();
 
     });
+    }
+  )
+
   });
 });
 
