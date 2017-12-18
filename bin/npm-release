@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 var spawn = require('child_process').spawn,
-    exec = require('child_process').exec,
-    path = require('path'),
-    fs = require('fs'),
-    argv = require('optimist').argv,
-    colors = require('colors'),
-    version = process.argv[2],
-    distDir = process.argv[3],
-    releasePath = path.resolve(__dirname, './git-release');
+  exec = require('child_process').exec,
+  path = require('path'),
+  fs = require('fs'),
+  argv = require('optimist').argv,
+  colors = require('colors'),
+  version = process.argv[2],
+  distDir = process.argv[3],
+  releasePath = path.resolve(__dirname, './git-release');
 
 var exit = function (str) {
   console.log([].slice.call(arguments).join(' ').red);
@@ -34,8 +34,8 @@ var getPkg = function () {
   var pkg;
   try {
     pkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), './package.json')));
-  } catch(e) {
-    error('Could not open a package.json.');
+  } catch (e) {
+    error('Could not open package.json.');
   }
   return pkg;
 };
@@ -45,7 +45,7 @@ var getCurrentVersion = function () {
 };
 
 var oldVersion = getCurrentVersion(),
-    message = argv.m || argv.message;
+  message = argv.m || argv.message;
 
 if (!oldVersion) error('No version in package.json found.');
 if (!version) error('No version supplied.');
@@ -53,8 +53,6 @@ if (!version) error('No version supplied.');
 if (!distDir) error('No dist directory supplied.');
 if (!fs.existsSync(distDir) || !fs.lstatSync(distDir).isDirectory())
   error(distDir + ' does not exist or is not a directory.')
-
-msg ('riddle me this, ridlle me that, who\'s afrais of the big bad bat?')
 
 // Run npm verison (tags & commits)
 msg('Updating version...');
@@ -66,50 +64,44 @@ sourceCodeVersionBump.stderr.pipe(process.stderr);
 sourceCodeVersionBump.on('close', function (code) {
   if (code !== 0) return error('npm version. Exiting.');
 
-  success('Version bumped from', oldVersion, 'to', getCurrentVersion());
-  msg('Pushing...');
+  success('Version bumped from', oldVersion, 'to', getCurrentVersion(), 'in source code');
 
-  // Run git-release (tag & push)
-  var release = spawn('sh', [releasePath, getCurrentVersion()]);
-  release.stdout.pipe(process.stdout);
-  release.stderr.pipe(process.stderr);
-  release.on('close', function (code) {
-    if (code !== 0) return error('git-release. Exiting.');
+  var bumpDist = spawn('npm', ['version', version, '-m', message || "Release v%s."], { cwd: distDir });
 
-    success('Pushed.');
+  bumpDist.on('close', function (code) {
+    if (code !== 0) return error('npm version in dist. Exiting.');
+    success('Version bumped from', oldVersion, 'to', getCurrentVersion(), 'in dist folder');
 
-    if (getPkg().private) {
-      msg('Publish to npm cancelled, this is a private repo.');
-      return done();
-    }
+    msg('Pushing...');
 
-    msg('Publishing to npm...');
+    // Run git-release (tag & push)
+    var release = spawn('sh', [releasePath, getCurrentVersion()]);
+    release.stdout.pipe(process.stdout);
+    release.stderr.pipe(process.stderr);
+    release.on('close', function (code) {
+      if (code !== 0) return error('git-release. Exiting.');
 
-    var bumpDist = spawn('npm', ['version', version, '-m', message || "Release v%s."], {cwd:distDir});
-    bumpDist.stdout.pause(process.stdout);
-    bumpDist.on('close', function (code) {
-      if (code !== 0) return error('npm version bump in packaged libary. Exiting.');
+      success('Pushed.');
 
-      success('bumped version of built package.');
-      done();
-    });
+      if (getPkg().private) {
+        msg('Publish to npm cancelled, this is a private repo.');
+        return done();
+      }
 
-    bumpDist.on('close', function(code) {
-      if (code !== 0) return error('npm version in dist. Exiting.');
+      msg('Publishing to npm...');
+
       // Publish to npm
-    var publish = spawn('npm', ['publish', distDir]);
-    publish.stdout.pipe(process.stdout);
-    publish.stderr.pipe(process.stderr);
-    publish.on('close', function (code) {
-      if (code !== 0) return error('npm publish. Exiting.');
+      var publish = spawn('npm', ['publish', distDir]);
+      publish.stdout.pipe(process.stdout);
+      publish.stderr.pipe(process.stderr);
+      publish.on('close', function (code) {
+        if (code !== 0) return error('npm publish. Exiting.');
 
-      success('Published to npm.');
-      done();
+        success('Published to npm.');
+        done();
 
+      });
     });
-    }
-  )
 
   });
 });
-
